@@ -1,9 +1,10 @@
 import re
+import sys
 
-filename = "MaxL.hack"
+filename = sys.argv[1]
 
 def write_file(binary):
-    file = open(f'max/{filename}','a')
+    file = open(f'{filename}.hack','a')
     file.write(f'{binary}\n')
     file.close()
 
@@ -101,21 +102,55 @@ def create_jump_binary(jump):
     elif jump == "JMP":
         return "111"
 
-f = open(f'max/{filename}', "x")
+f = open(f'{filename}.hack', "x")
+f.close()
 
-f = open(f'max/MaxL.asm')
+f = open(f'{filename}.asm')
+
+symbol_table = dict()
+orders = list()
+
+line_number = -1
 
 for x in f:
     x = x.strip()
+    result = re.search('//', x)
+    if not (result is None):
+        chars_number = result.start()
+        x = x[:chars_number].strip()
     if (x[0:2] == "//") or (x == ""):
         continue
+    if x[0] == "(" and x[-1] == ")":
+        symbol = x[1:-1]
+        symbol_table[symbol] = (line_number + 1)
+    else:
+        orders.append(x)
+        line_number += 1
+
+symbol_table = {**symbol_table, "SP": 0, "LCL": 1, "ARG": 2, "THIS": 3, "THAT": 4, "SCREEN": 16384, "KBD": 24576}
+for x in range(0, 16):
+    key = f'R{x}'
+    symbol_table[key] = x
+
+value_number = 16
+
+for x in orders:
+    print(x)
     if (x[0:1] == "@"):
         print("A命令")
         if x[1:].isdecimal():
             order = str(format(int(x[1:]), '016b'))
             write_file(order)
         else:
-            print('これはシンボル')
+            print('シンボル')
+            if x[1:] in symbol_table:
+                num = symbol_table[x[1:]]
+                order = str(format(num, '016b'))
+            else:
+                symbol_table[x[1:]] = value_number
+                order = str(format(value_number, '016b'))
+                value_number += 1
+            write_file(order)
     else:
         print('C命令')
         result = re.search('=', x)
