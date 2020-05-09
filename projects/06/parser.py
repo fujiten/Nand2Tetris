@@ -1,7 +1,9 @@
 import re
 
+filename = "MaxL.hack"
+
 def write_file(binary):
-    file = open('add/Add.hack','a')
+    file = open(f'max/{filename}','a')
     file.write(f'{binary}\n')
     file.close()
 
@@ -81,16 +83,28 @@ def create_comp_binary(comp):
     elif comp == "D|M":
         return "1010101"
 
+def create_jump_binary(jump):
+    if jump is None:
+        return "000"
+    elif jump == "JGT":
+        return "001"
+    elif jump == "JEQ":
+        return "010"
+    elif jump == "JGE":
+        return "011"
+    elif jump == "JLT":
+        return "100"
+    elif jump == "JNE":
+        return "101"
+    elif jump == "JLE":
+        return "110"
+    elif jump == "JMP":
+        return "111"
 
+f = open(f'max/{filename}', "x")
 
+f = open(f'max/MaxL.asm')
 
-
-
-filename = "Add.asm"
-
-f = open("add/Add.hack", "x")
-
-f = open("add/Add.asm")
 for x in f:
     x = x.strip()
     if (x[0:2] == "//") or (x == ""):
@@ -105,17 +119,25 @@ for x in f:
     else:
         print('C命令')
         result = re.search('=', x)
-        char_idx = result.start()
-        left_side = x[0:char_idx]
-        right_side = x[char_idx+1:]
-        dest = create_dest_binary(left_side)
-        print(dest)
-        comp = create_comp_binary(right_side)
-        print(comp)
-        jump = "000"
-        order = "111" + comp + dest + jump
-        write_file(order)
-
+        if not (result is None):
+            char_idx = result.start()
+            left_side = x[0:char_idx]
+            right_side = x[char_idx+1:]
+            dest = create_dest_binary(left_side)
+            comp = create_comp_binary(right_side)
+            jump = "000"
+            order = "111" + comp + dest + jump
+            write_file(order)
+        else:
+            result = re.search(';', x)
+            char_idx = result.start()
+            left_side = x[0:char_idx]
+            right_side = x[char_idx+1:]
+            dest = "000"
+            comp = create_comp_binary(left_side)
+            jump = create_jump_binary(right_side)
+            order = "111" + comp + dest + jump
+            write_file(order)
 
 f.close()
 
