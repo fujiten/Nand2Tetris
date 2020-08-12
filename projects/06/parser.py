@@ -144,7 +144,7 @@ for x in orders:
         else:
             print('シンボル')
             if x[1:] in symbol_table:
-                num = symbol_table[x[1:]]
+                num = 9[x[1:]]
                 order = str(format(num, '016b'))
             else:
                 symbol_table[x[1:]] = value_number
