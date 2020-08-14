@@ -30,7 +30,7 @@ class CodeWriter
   end
 
   def write_file
-    File.open(self.filename, 'w') do |file|
+    File.open(self.filename + '.asm', 'w') do |file|
       self.for_asm_orders.each do |order|
         file.puts(order)
       end
@@ -52,6 +52,10 @@ class CodeWriter
         create_order_for_push_that(splitted_order[2].to_i)
       elsif splitted_order[1] == "temp"
         create_order_for_push_temp(splitted_order[2].to_i)
+      elsif splitted_order[1] == 'pointer'
+        create_order_for_push_pointer(splitted_order[2].to_i)
+      elsif splitted_order[1] == 'static'
+        create_order_for_push_static(splitted_order[2].to_i)
       end
     elsif splitted_order[0] == 'pop'
       if splitted_order[1] == 'local'
@@ -64,6 +68,10 @@ class CodeWriter
         create_order_for_pop_that(splitted_order[2].to_i)
       elsif splitted_order[1] == "temp"
         create_order_for_pop_temp(splitted_order[2].to_i)
+      elsif splitted_order[1] == 'pointer'
+        create_order_for_pop_pointer(splitted_order[2].to_i)
+      elsif splitted_order[1] == 'static'
+        create_order_for_pop_static(splitted_order[2].to_i)
       end
     elsif splitted_order[0] == 'add'
       create_orders_for_add_func
@@ -229,9 +237,9 @@ class CodeWriter
     set_orders_of_asms(arr)
   end
 
-  def create_order_for_push_temp(index)
+  def create_order_for_push_pointer(index)
     arr = []
-    arr << "@#{5+index}"
+    arr << "@#{3+index}"
     arr << "D=M"
     arr << "@SP"
     arr << "A=M"
@@ -240,6 +248,42 @@ class CodeWriter
     arr << "M=M+1"
     set_orders_of_asms(arr)
   end
+
+  def create_order_for_pop_pointer(index)
+    arr = []
+    arr << "@SP"
+    arr << "M=M-1"    
+    arr << "A=M"
+    arr << "D=M"
+    arr << "@#{3+index}"
+    arr << "M=D"
+    set_orders_of_asms(arr)
+  end
+
+  def create_order_for_push_static(index)
+    arr = []
+    arr << "@#{filename + '.' + index.to_s}"
+    arr << "D=M"
+    arr << "@SP"
+    arr << "A=M"
+    arr << "M=D"
+    arr << "@SP"
+    arr << "M=M+1"
+    set_orders_of_asms(arr)
+  end
+
+  def create_order_for_pop_static(index)
+    arr = []
+    arr << "@SP"
+    arr << "M=M-1"    
+    arr << "A=M"
+    arr << "D=M"
+    arr << "@#{filename + '.' + index.to_s}"
+    arr << "M=D"
+    set_orders_of_asms(arr)
+  end
+
+  # 算術コマンド
 
   def create_orders_for_add_func
     arr = []
@@ -366,9 +410,8 @@ parser = Parser.new
 
 parser.file_open_and_parse(filename)
 filename.slice!('.vm')
-new_file_name = filename + '.asm'
-puts new_file_name
-code_writer = CodeWriter.new(new_file_name)
+puts filename
+code_writer = CodeWriter.new(filename)
 
 parser.parsed_orders.each_with_index do |order, i|
   code_writer.set_asm_order_according_to_vm_order(order, i)
