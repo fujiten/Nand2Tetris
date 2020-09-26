@@ -85,6 +85,12 @@ class CodeWriter
       create_orders_for_and_or_func(splitted_order[0])
     elsif splitted_order[0] == 'not'
       create_orders_for_not_func
+    elsif splitted_order[0] == 'label'
+      create_order_for_label(splitted_order[1])
+    elsif splitted_order[0] == 'goto'
+      create_order_for_goto(splitted_order[1])
+    elsif splitted_order[0] == 'if-goto'
+      create_order_for_if_goto(splitted_order[1])
     end
   end
 
@@ -399,6 +405,30 @@ class CodeWriter
     arr << "@SP"
     arr << "M=M+1"
     arr
+  end
+
+  def create_order_for_label(label_name)
+    arr = []
+    arr << "(#{label_name})"
+    set_orders_of_asms(arr)
+  end
+
+  def create_order_for_goto(label_name)
+    arr = []
+    arr << "@#{label_name}"
+    arr << "0;JMP"
+    set_orders_of_asms(arr)
+  end
+
+  def create_order_for_if_goto(label_name)
+    arr = []
+    arr << "@SP"
+    arr << "M=M-1"
+    arr << "A=M"
+    arr << "D=M"
+    arr << "@#{label_name}"
+    arr << "D;JNE"
+    set_orders_of_asms(arr)
   end
   
 end
