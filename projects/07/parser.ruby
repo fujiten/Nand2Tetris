@@ -27,6 +27,7 @@ class CodeWriter
   def initialize(filename)
     self.filename = filename
     self.for_asm_orders = []
+    # set_initial_order
   end
 
   def write_file
@@ -91,10 +92,23 @@ class CodeWriter
       create_order_for_goto(splitted_order[1])
     elsif splitted_order[0] == 'if-goto'
       create_order_for_if_goto(splitted_order[1])
+    elsif splitted_order[0] == 'function'
+      create_order_for_function(splitted_order[1], splitted_order[2])
+    elsif splitted_order[0] == 'return'
+      create_order_for_return()
     end
   end
 
   private
+
+  def set_initial_order
+    arr = []
+    arr << "@256"
+    arr << "D=A"
+    arr << "@SP"
+    arr << "M=D"
+    set_orders_of_asms(arr)
+  end
 
   def create_orders_for_constant(const_value)
     arr = []
@@ -428,6 +442,90 @@ class CodeWriter
     arr << "D=M"
     arr << "@#{label_name}"
     arr << "D;JNE"
+    set_orders_of_asms(arr)
+  end
+
+  def create_order_for_function(function_name, local_var_count)
+    local_var_count = local_var_count.to_i
+    arr = []
+    arr << "@#{function_name}"
+    local_var_count.times do 
+      arr << "@0"
+      arr << "D=A"
+      arr << "@SP"
+      arr << "A=M"
+      arr << "M=D"
+      arr << "@SP"
+      arr << "M=M+1"
+    end
+    set_orders_of_asms(arr)
+  end
+
+  def create_order_for_return
+    arr = []
+    arr << "@LCL"
+    arr << "D=M"
+    arr << "@13"
+    arr << "M=D"
+    arr << "@13"
+    arr << "D=M"
+    arr << "@5"
+    arr << "D=D-A"
+    arr << "A=D"
+    arr << "D=M"
+    arr << "@14"
+    arr << "M=D"
+    
+    # args.pop()
+    arr <<'@SP'
+    arr <<'A=M-1'
+    arr <<'D=M'
+    arr <<'@ARG'
+    arr <<'A=M'
+    arr <<'M=D'
+    arr <<'@SP'
+    arr <<'M=M-1'
+
+    # SP = ARG + 1
+    arr << "@ARG"
+    arr << "D=M+1"
+    arr << "@SP"
+    arr << "M=D"
+
+    arr << '@13'
+    arr << 'A=M-1'
+    arr << 'D=M'
+    arr << '@THAT'
+    arr << 'M=D'
+
+    # THIS
+    arr << '@13'
+    arr << 'D=M'
+    arr << '@2'
+    arr << 'A=D-A'
+    arr << 'D=M'
+    arr << '@THIS'
+    arr << 'M=D'
+
+    arr << '@13'
+    arr << 'D=M'
+    arr << '@3'
+    arr << 'A=D-A'
+    arr << 'D=M'
+    arr << '@ARG'
+    arr << 'M=D'
+  
+    arr << '@13'
+    arr << 'D=M'
+    arr << '@4'
+    arr << 'A=D-A'
+    arr << 'D=M'
+    arr << '@LCL'
+    arr << 'M=D'
+    
+    arr << '@14'
+    arr << 'A=M'
+    arr << '0;JMP'
     set_orders_of_asms(arr)
   end
   
