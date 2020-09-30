@@ -27,7 +27,7 @@ class CodeWriter
   def initialize(filename)
     self.filename = filename
     self.for_asm_orders = []
-    # set_initial_order
+    create_boot_strap_code()
   end
 
   def write_file
@@ -96,6 +96,8 @@ class CodeWriter
       create_order_for_function(splitted_order[1], splitted_order[2])
     elsif splitted_order[0] == 'return'
       create_order_for_return()
+    elsif splitted_order[0] == 'call'
+      create_order_for_call(splitted_order[1], splitted_order[2], i)
     end
   end
 
@@ -448,7 +450,7 @@ class CodeWriter
   def create_order_for_function(function_name, local_var_count)
     local_var_count = local_var_count.to_i
     arr = []
-    arr << "@#{function_name}"
+    arr << "(#{function_name})"
     local_var_count.times do 
       arr << "@0"
       arr << "D=A"
@@ -527,6 +529,106 @@ class CodeWriter
     arr << 'A=M'
     arr << '0;JMP'
     set_orders_of_asms(arr)
+  end
+
+  def create_order_for_call(function_name, arg_count, i)
+    arg_count = arg_count.to_i
+    arr = []
+
+    # RETURNアドレスの位置を格納
+    arr << "@RETURN_ADDRESS_#{i}"
+    arr << "D=A"
+    arr = arr + create_order_for_push_D_to_SP_and_plus1_on_SP
+
+    # 現在のLCLの値をSPに格納
+    arr << "@LCL"
+    arr << "D=A"
+    arr = arr + create_order_for_push_D_to_SP_and_plus1_on_SP
+
+    arr << "@ARG"
+    arr << "D=M"
+    arr = arr + create_order_for_push_D_to_SP_and_plus1_on_SP
+
+    arr << "@THIS"
+    arr << "D=M"
+    arr = arr + create_order_for_push_D_to_SP_and_plus1_on_SP
+
+    arr << "@THAT"
+    arr << "D=M"
+    arr = arr + create_order_for_push_D_to_SP_and_plus1_on_SP
+
+    # @ARGの示す位置を更新する
+    arr << "@SP"
+    arr << "D=M"
+    arr << "@#{arg_count + 5}"
+    arr << "D=D-A"
+    arr << "@ARG"
+    arr << "M=D"
+
+    # LCLをSPの位置に宣言。呼び出され側が必要なローカル変数分、0を初期値として宣言していくが呼び出し側は気にしない
+    arr << "@SP"
+    arr << "D=M"
+    arr << "@LCL"
+    arr << "M=D"
+
+    # goto f
+    arr << "@#{function_name}"
+    arr << "0;JMP"
+
+    # リターンアドレスの宣言
+    arr << "(RETURN_ADDRESS_#{i})"
+    set_orders_of_asms(arr)
+  end
+
+  def create_boot_strap_code()
+    arr = []
+    arr << "@256"
+    arr << "D=A"
+    arr << "@SP"
+    arr << "M=D"
+    label_name = "return-address-sysinit"
+    arr << "@#{label_name}"
+
+    # 現在のLCLの値をSPに格納
+    arr << "@LCL"
+    arr << "D=A"
+    arr = arr + create_order_for_push_D_to_SP_and_plus1_on_SP
+
+    arr << "@ARG"
+    arr << "D=M"
+    arr = arr + create_order_for_push_D_to_SP_and_plus1_on_SP
+
+    arr << "@THIS"
+    arr << "D=M"
+    arr = arr + create_order_for_push_D_to_SP_and_plus1_on_SP
+
+    arr << "@THAT"
+    arr << "D=M"
+    arr = arr + create_order_for_push_D_to_SP_and_plus1_on_SP
+
+    # @ARGの示す位置を更新する
+    arr << "@SP"
+    arr << "D=M"
+    arr << "@5"
+    arr << "D=D-A"
+    arr << "@ARG"
+    arr << "M=D"
+
+    # LCLをSPの位置に宣言。呼び出され側が必要なローカル変数分、0を初期値として宣言していくが呼び出し側は気にしない
+    arr << "@SP"
+    arr << "D=M"
+    arr << "@LCL"
+    arr << "M=D"
+
+    # goto f
+    arr << "@Sys.init"
+    arr << "0;JMP"
+    arr << "(#{label_name})"
+    set_orders_of_asms(arr)
+  end
+
+  def create_order_for_push_D_to_SP_and_plus1_on_SP
+    return ["@SP", "A=M", "M=D", "@SP", "M=M+1"]
   end
   
 end
